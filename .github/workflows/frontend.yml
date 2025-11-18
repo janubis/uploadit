@@ -11,9 +11,7 @@ on:
       - 'apps/frontend/**'
       - 'packages/**'
       - 'turbo.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'Dockerfile.web'
+      - 'Dockerfile.frontend'
 
 jobs:
   build-and-push:
