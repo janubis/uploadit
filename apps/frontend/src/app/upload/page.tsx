@@ -14,7 +14,7 @@ const Page = () => {
       <form action={action}>
         <div>
           <Label htmlFor="file" className="text-sm font-medium text-gray-700">
-            Choose a filea
+            Choose a file
           </Label>
           <Input name="file" id="file" type="file" className="mt-2" />
           {!!state?.errors?.file && (
