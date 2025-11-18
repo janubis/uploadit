@@ -1,31 +1,56 @@
-# ---- Base Image ----
+# Dockerfile.frontend - Next.js app at apps/frontend using npm workspaces
+
+# ---------- Base image ----------
 FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable
 
-# ---- Prune Only The Needed Workspace For frontend ----
+# ---------- Prune workspace for frontend ----------
 FROM base AS pruner
-COPY turbo.json package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+WORKDIR /app
+
+# Root config & lockfile
+COPY turbo.json package.json package-lock.json .npmrc ./
+
+# Only copy what frontend needs (apps + shared packages)
 COPY apps/frontend ./apps/frontend
 COPY packages ./packages
-RUN pnpm install --frozen-lockfile
-RUN pnpm turbo prune frontend --docker
 
-# ---- Build Stage ----
+# Install all deps once so turbo can run
+RUN npm ci
+
+# Prune for docker: keep only what "frontend" needs
+RUN npx turbo prune frontend --docker
+
+# ---------- Build stage ----------
 FROM base AS builder
-COPY --from=pruner /app/out/json/ ./
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-RUN pnpm install --frozen-lockfile
-COPY --from=pruner /app/out/full/ ./
-RUN pnpm turbo run build --filter=frontend...
-
-# ---- Runtime Stage ----
-FROM base AS runner
 WORKDIR /app
+
+# Copy pruned package.jsons + lockfile
+COPY --from=pruner /app/out/json/ ./
+COPY --from=pruner /app/out/package-lock.json ./package-lock.json
+COPY --from=pruner /app/.npmrc ./.npmrc
+
+# Install deps for the pruned workspace
+RUN npm ci
+
+# Copy the pruned source code
+COPY --from=pruner /app/out/full/ ./
+
+# Build only the frontend app
+RUN npx turbo run build --filter=frontend...
+
+# ---------- Runtime image ----------
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN apk add --no-cache libc6-compat
 ENV NODE_ENV=production
+
+# Copy built app and node_modules from builder
 COPY --from=builder /app ./
 
 EXPOSE 3000
-CMD ["pnpm", "--filter", "frontend", "start"]
+
+# Uses scripts from apps/frontend/package.json:
+# "start": "next start"
+CMD ["npm", "run", "start", "--workspace=frontend"]

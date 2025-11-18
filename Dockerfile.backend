@@ -1,31 +1,48 @@
-# ---- Base Image ----
+# Dockerfile.backend - NestJS app at apps/backend using npm workspaces
+
+# ---------- Base image ----------
 FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable
 
-# ---- Prune Only The Needed Workspace For backend ----
+# ---------- Prune workspace for backend ----------
 FROM base AS pruner
-COPY turbo.json package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+WORKDIR /app
+
+COPY turbo.json package.json package-lock.json .npmrc ./
 COPY apps/backend ./apps/backend
 COPY packages ./packages
-RUN pnpm install --frozen-lockfile
-RUN pnpm turbo prune backend --docker
 
-# ---- Build Stage ----
+RUN npm ci
+
+# Prune for docker for the "backend" app
+RUN npx turbo prune backend --docker
+
+# ---------- Build stage ----------
 FROM base AS builder
-COPY --from=pruner /app/out/json/ ./
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-RUN pnpm install --frozen-lockfile
-COPY --from=pruner /app/out/full/ ./
-RUN pnpm turbo run build --filter=backend...
-
-# ---- Runtime Stage ----
-FROM base AS runner
 WORKDIR /app
+
+COPY --from=pruner /app/out/json/ ./
+COPY --from=pruner /app/out/package-lock.json ./package-lock.json
+COPY --from=pruner /app/.npmrc ./.npmrc
+
+RUN npm ci
+
+COPY --from=pruner /app/out/full/ ./
+
+# Build only the backend app
+RUN npx turbo run build --filter=backend...
+
+# ---------- Runtime image ----------
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN apk add --no-cache libc6-compat
 ENV NODE_ENV=production
+
 COPY --from=builder /app ./
 
 EXPOSE 4000
-CMD ["pnpm", "--filter", "backend", "start:prod"]
+
+# apps/backend/package.json has:
+# "start:prod": "node dist/main"
+CMD ["npm", "run", "start:prod", "--workspace=backend"]
