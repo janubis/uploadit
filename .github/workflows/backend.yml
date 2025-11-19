@@ -1,17 +1,17 @@
-name: Frontend CI/CD
+name: Backend CI/CD
 
 env:
-  DOCKER_REGISTRY: 168632362689.dkr.ecr.ap-southeast-1.amazonaws.com/uploadit-frontend
+  DOCKER_REGISTRY: 168632362689.dkr.ecr.ap-southeast-1.amazonaws.com/uploadit-backend
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'apps/frontend/**'
+      - 'apps/backend/**'
       - 'packages/**'
       - 'turbo.json'
-      - 'Dockerfile.frontend'
+      - 'Dockerfile.backend'
 
 jobs:
   build-and-push:
@@ -42,7 +42,7 @@ jobs:
 
       - name: Check lint
         run: |
-          npx turbo run lint --filter=frontend
+          npx turbo run lint --filter=backend
 
       - name: Set up Docker Buildx 🚀
         uses: docker/setup-buildx-action@v3
@@ -59,7 +59,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./Dockerfile.frontend
+          file: ./Dockerfile.backend
           platforms: linux/amd64
           push: true
           tags: |

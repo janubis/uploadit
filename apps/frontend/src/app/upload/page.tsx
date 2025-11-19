@@ -28,11 +28,6 @@ const Page = () => {
           Upload
         </Button>
       </form>
-
-      <img
-        src="http://localhost:8000/file-1739527827004-905414997.png"
-        alt=""
-      />
     </div>
   );
 };
