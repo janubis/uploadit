@@ -18,7 +18,7 @@ export class UploadController {
         filename: (req, file, callback) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
-          callback(
+          callback ( 
             null,
             `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`,
           );
