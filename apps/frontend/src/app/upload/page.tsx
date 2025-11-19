@@ -25,7 +25,7 @@ const Page = () => {
           type="submit"
           className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
         >
-          Upload
+          Upload Image under 100kb.
         </Button>
       </form>
     </div>
